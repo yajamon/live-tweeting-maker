@@ -11,6 +11,7 @@ function App() {
 
   const handleSubmit = (text: string) => {
     posts.addPost(timer.elapsedSeconds, text);
+    posts.setDraftText("");
   };
 
   return (
@@ -19,10 +20,15 @@ function App() {
       <TimerPanel timer={timer} />
       <Timeline
         posts={posts.posts}
+        suffix={posts.suffix}
         onDelete={posts.deletePost}
         onEdit={posts.editPost}
       />
-      <Composer onSubmit={handleSubmit} />
+      <Composer
+        draftText={posts.draftText}
+        onDraftChange={posts.setDraftText}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }

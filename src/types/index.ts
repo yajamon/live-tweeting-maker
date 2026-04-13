@@ -7,6 +7,7 @@ export interface Post {
 
 export interface SessionData {
   authorName: string;
+  suffix: string;
   posts: Post[];
-  version: 2;
+  version: 3;
 }

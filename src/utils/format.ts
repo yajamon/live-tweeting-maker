@@ -17,6 +17,33 @@ export function formatTime(totalSeconds: number): string {
 }
 
 /**
+ * Parse a time string (HH:MM:SS, MM:SS, or plain number) into total seconds.
+ * Returns NaN if the input cannot be parsed.
+ */
+export function parseTimeInput(input: string): number {
+  const trimmed = input.trim();
+  if (!trimmed) return NaN;
+
+  // Plain number (seconds)
+  if (/^[\d.]+$/.test(trimmed)) {
+    return Number(trimmed);
+  }
+
+  // HH:MM:SS.xx or MM:SS.xx
+  const parts = trimmed.split(":");
+  if (parts.length === 2) {
+    const [min, sec] = parts.map(Number);
+    return min * 60 + sec;
+  }
+  if (parts.length === 3) {
+    const [hr, min, sec] = parts.map(Number);
+    return hr * 3600 + min * 60 + sec;
+  }
+
+  return NaN;
+}
+
+/**
  * Weighted character count following X/Twitter rules:
  * Full-width characters count as 2, half-width as 1, towards a limit of 280.
  */

@@ -1,45 +1,55 @@
-import { useState, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { Send } from "lucide-react";
 import { twitterWeightedLength } from "../utils/format";
 
 const MAX_WEIGHT = 280;
 
 interface ComposerProps {
+  draftText: string;
+  onDraftChange: (text: string) => void;
   onSubmit: (text: string) => void;
 }
 
-export function Composer({ onSubmit }: ComposerProps) {
-  const [text, setText] = useState("");
+export function Composer({ draftText, onDraftChange, onSubmit }: ComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const weight = twitterWeightedLength(text);
+  const weight = twitterWeightedLength(draftText);
   const overLimit = weight > MAX_WEIGHT;
 
   const submit = useCallback(() => {
-    const trimmed = text.trim();
+    const trimmed = draftText.trim();
     if (!trimmed) return;
     onSubmit(trimmed);
-    setText("");
+    onDraftChange("");
     textareaRef.current?.focus();
-  }, [text, onSubmit]);
+  }, [draftText, onSubmit, onDraftChange]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // IME変換中のEnterは無視する
     if (e.nativeEvent.isComposing) return;
-    // Ctrl+Enter (macOS: Cmd+Enter) で送信
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       submit();
     }
   };
 
+  // Auto-focus when tab becomes active
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        textareaRef.current?.focus();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
+
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3">
       <div className="flex gap-2 items-end">
         <textarea
           ref={textareaRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+          value={draftText}
+          onChange={(e) => onDraftChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="実況コメントを入力…（Ctrl+Enter / Cmd+Enter で送信）"
           rows={3}
@@ -47,7 +57,7 @@ export function Composer({ onSubmit }: ComposerProps) {
         />
         <button
           onClick={submit}
-          disabled={!text.trim()}
+          disabled={!draftText.trim()}
           className="shrink-0 p-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           title="送信"
         >

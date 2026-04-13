@@ -5,19 +5,24 @@ import { formatTime, twitterWeightedLength } from "../utils/format";
 
 interface TimelineProps {
   posts: Post[];
+  suffix: string;
   onDelete: (id: string) => void;
   onEdit: (id: string, text: string) => void;
 }
 
-export function Timeline({ posts, onDelete, onEdit }: TimelineProps) {
+export function Timeline({ posts, suffix, onDelete, onEdit }: TimelineProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const editWeight = twitterWeightedLength(editText);
+  const prevCountRef = useRef(posts.length);
 
-  // Auto-scroll to bottom when new posts arrive
+  // Auto-scroll only when a new post is added (not on edit/delete)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (posts.length > prevCountRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    prevCountRef.current = posts.length;
   }, [posts.length]);
 
   const startEdit = (post: Post) => {
@@ -38,6 +43,13 @@ export function Timeline({ posts, onDelete, onEdit }: TimelineProps) {
     setEditText("");
   };
 
+  const handleDelete = (post: Post) => {
+    const preview = post.text.length > 30 ? post.text.slice(0, 30) + "…" : post.text;
+    if (confirm(`この投稿を削除しますか？\n\n[${formatTime(post.timestamp)}] ${preview}`)) {
+      onDelete(post.id);
+    }
+  };
+
   if (posts.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500 select-none">
@@ -45,6 +57,8 @@ export function Timeline({ posts, onDelete, onEdit }: TimelineProps) {
       </div>
     );
   }
+
+  const sfx = suffix.trim();
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
@@ -108,6 +122,9 @@ export function Timeline({ posts, onDelete, onEdit }: TimelineProps) {
             <>
               <p className="flex-1 text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap text-left">
                 {post.text}
+                {sfx && (
+                  <span className="text-gray-400 dark:text-gray-500"> {sfx}</span>
+                )}
               </p>
               <div className="shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
@@ -118,11 +135,7 @@ export function Timeline({ posts, onDelete, onEdit }: TimelineProps) {
                   <Pencil size={14} />
                 </button>
                 <button
-                  onClick={() => {
-                    if (confirm("この投稿を削除しますか？")) {
-                      onDelete(post.id);
-                    }
-                  }}
+                  onClick={() => handleDelete(post)}
                   className="p-1 text-gray-400 hover:text-red-500"
                   title="削除"
                 >

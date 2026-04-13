@@ -6,13 +6,15 @@ export interface UseTimerReturn {
   /** Current elapsed seconds (adjusted by offset) */
   elapsedSeconds: number;
   initialSeconds: number;
+  countdownDuration: number;
   phase: TimerPhase;
   countdownRemaining: number;
-  startWithCountdown: (countdownFrom?: number) => void;
+  start: () => void;
   stop: () => void;
   reset: () => void;
   adjustOffset: (delta: number) => void;
   setInitialSeconds: (seconds: number) => void;
+  setCountdownDuration: (seconds: number) => void;
 }
 
 export function useTimer(): UseTimerReturn {
@@ -20,6 +22,7 @@ export function useTimer(): UseTimerReturn {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [initialSeconds, setInitialSecondsState] = useState(0);
   const [countdownRemaining, setCountdownRemaining] = useState(0);
+  const [countdownDuration, setCountdownDurationState] = useState(10);
   const [offset, setOffset] = useState(0);
 
   // When the main timer actually started (Date.now())
@@ -48,7 +51,7 @@ export function useTimer(): UseTimerReturn {
   }, []);
 
   const startWithCountdown = useCallback(
-    (countdownFrom = 3) => {
+    (countdownFrom: number) => {
       clearIntervals();
       setOffset(0);
       setElapsedSeconds(0);
@@ -99,6 +102,14 @@ export function useTimer(): UseTimerReturn {
     setOffset((prev) => prev + delta);
   }, []);
 
+  const start = useCallback(() => {
+    startWithCountdown(countdownDuration);
+  }, [startWithCountdown, countdownDuration]);
+
+  const setCountdownDuration = useCallback((seconds: number) => {
+    setCountdownDurationState(Math.max(0, Math.round(seconds)));
+  }, []);
+
   const setInitialSeconds = useCallback((seconds: number) => {
     setInitialSecondsState(Math.max(0, seconds));
   }, []);
@@ -111,12 +122,14 @@ export function useTimer(): UseTimerReturn {
   return {
     elapsedSeconds: adjusted,
     initialSeconds,
+    countdownDuration,
     phase,
     countdownRemaining,
-    startWithCountdown,
+    start,
     stop,
     reset,
     adjustOffset,
     setInitialSeconds,
+    setCountdownDuration,
   };
 }
