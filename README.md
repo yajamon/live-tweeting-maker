@@ -1,73 +1,44 @@
-# React + TypeScript + Vite
+# 実況ツイートメーカー（Live Tweeting Maker）
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+動画のリアタイ視聴を逃したときでも、録画・アーカイブを見ながらタイムスタンプ付きの実況コメントを記録できる、ブラウザ完結型の Web アプリです。
 
-Currently, two official plugins are available:
+## 主な機能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **タイマー同期** — カウントダウン後にタイマーを開始し、`HH:MM:SS.xx` 形式（センチ秒まで）で経過時間を表示。`+1s` / `-1s` / `+10s` / `-10s` のオフセット調整で動画とのズレを補正できます。
+- **実況投稿** — 画面下部に固定された入力欄から、`Ctrl+Enter` / `Cmd+Enter` または送信ボタンで投稿。その瞬間のタイマー時間がタイムスタンプとして自動付与されます。X（Twitter）の文字数制限（全角 140 字 / 半角 280 字）を意識したリアルタイムカウンターも付いています。
+- **データ管理** — 投稿内容は `localStorage` に自動保存。ページをリロードしてもタイムラインは復元されます（タイマーはリセットされた状態で起動）。JSON ファイルへのエクスポートと再インポートにも対応しています。
 
-## React Compiler
+## 技術スタック
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| 分類 | 採用技術 |
+|------|----------|
+| UI フレームワーク | React 19 + TypeScript |
+| ビルドツール | Vite |
+| スタイリング | Tailwind CSS |
+| アイコン | Lucide React |
+| データ保存 | localStorage |
+| ファイル入出力 | ブラウザ File API（Blob / File） |
+| デプロイ想定 | GitHub Pages 等の静的ホスティング |
 
-## Expanding the ESLint configuration
+## ローカル開発
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+ビルド:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
+
+リント:
+
+```bash
+npm run lint
+```
+
+## ライセンス
+
+[MIT](LICENSE)
