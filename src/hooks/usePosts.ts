@@ -5,6 +5,11 @@ import { formatTime } from "../utils/format";
 const STORAGE_KEY = "live-tweeting-maker:posts";
 const DRAFT_KEY = "live-tweeting-maker:draft";
 
+const IMPORT_MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const IMPORT_MAX_POSTS = 10_000;
+const IMPORT_MAX_TEXT_LENGTH = 10_000;
+const IMPORT_MAX_META_LENGTH = 500;
+
 export type ImportMode = "replace" | "append" | "cancel";
 
 function normalizePost(post: unknown): Post | null {
@@ -26,12 +31,18 @@ function normalizePost(post: unknown): Post | null {
 }
 
 function loadSession(): SessionData {
+  const empty: SessionData = { authorName: "", suffix: "", posts: [], version: 3 };
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    return { authorName: "", suffix: "", posts: [], version: 3 };
-  }
+  if (!raw) return empty;
 
-  const parsed: unknown = JSON.parse(raw);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    console.warn("localStorage のセッションデータが破損しています。初期化します。");
+    localStorage.removeItem(STORAGE_KEY);
+    return empty;
+  }
 
   if (Array.isArray(parsed)) {
     return {
@@ -46,8 +57,8 @@ function loadSession(): SessionData {
     const session = parsed as Record<string, unknown>;
 
     return {
-      authorName: typeof session.authorName === "string" ? session.authorName : "",
-      suffix: typeof session.suffix === "string" ? session.suffix : "",
+      authorName: typeof session.authorName === "string" ? session.authorName.slice(0, IMPORT_MAX_META_LENGTH) : "",
+      suffix: typeof session.suffix === "string" ? session.suffix.slice(0, IMPORT_MAX_META_LENGTH) : "",
       posts: Array.isArray(session.posts)
         ? (session.posts as unknown[]).map(normalizePost).filter((post): post is Post => post !== null)
         : [],
@@ -55,7 +66,7 @@ function loadSession(): SessionData {
     };
   }
 
-  return { authorName: "", suffix: "", posts: [], version: 3 };
+  return empty;
 }
 
 function saveSession(session: SessionData) {
@@ -74,6 +85,7 @@ export interface UsePostsReturn {
   deletePost: (id: string) => void;
   editPost: (id: string, text: string) => void;
   clearAll: () => void;
+  clearAllData: () => void;
   exportJSON: () => void;
   exportText: () => string;
   copyToClipboard: () => Promise<void>;
@@ -130,6 +142,12 @@ export function usePosts(): UsePostsReturn {
     setSession((prev) => ({ ...prev, posts: [] }));
   }, []);
 
+  const clearAllData = useCallback(() => {
+    setSession({ authorName: "", suffix: "", posts: [], version: 3 });
+    setDraftTextState("");
+    localStorage.removeItem(DRAFT_KEY);
+  }, []);
+
   const buildTextLine = useCallback(
     (post: Post) => {
       const time = formatTime(post.timestamp);
@@ -162,6 +180,10 @@ export function usePosts(): UsePostsReturn {
   const importJSON = useCallback(async (file: File, mode: ImportMode) => {
     if (mode === "cancel") return;
 
+    if (file.size > IMPORT_MAX_FILE_SIZE) {
+      throw new Error(`ファイルサイズが上限（${IMPORT_MAX_FILE_SIZE / 1024 / 1024}MB）を超えています`);
+    }
+
     const text = await file.text();
     const raw = JSON.parse(text) as unknown;
 
@@ -177,11 +199,20 @@ export function usePosts(): UsePostsReturn {
         throw new Error("Invalid file format");
       }
       incomingPosts = (data.posts as unknown[]).map(normalizePost).filter((p): p is Post => p !== null);
-      incomingAuthor = typeof data.authorName === "string" ? data.authorName : "";
-      incomingSuffix = typeof data.suffix === "string" ? data.suffix : "";
+      incomingAuthor = typeof data.authorName === "string" ? data.authorName.slice(0, IMPORT_MAX_META_LENGTH) : "";
+      incomingSuffix = typeof data.suffix === "string" ? data.suffix.slice(0, IMPORT_MAX_META_LENGTH) : "";
     } else {
       throw new Error("Invalid file format");
     }
+
+    if (incomingPosts.length > IMPORT_MAX_POSTS) {
+      throw new Error(`投稿件数が上限（${IMPORT_MAX_POSTS}件）を超えています`);
+    }
+
+    // Truncate excessively long post texts
+    incomingPosts = incomingPosts.map((p) =>
+      p.text.length > IMPORT_MAX_TEXT_LENGTH ? { ...p, text: p.text.slice(0, IMPORT_MAX_TEXT_LENGTH) } : p,
+    );
 
     if (mode === "replace") {
       setSession({
@@ -210,6 +241,7 @@ export function usePosts(): UsePostsReturn {
     deletePost,
     editPost,
     clearAll,
+    clearAllData,
     exportJSON,
     exportText,
     copyToClipboard,

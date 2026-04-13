@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Pencil, Trash2, Check, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Pencil, Trash2, Check, X, ArrowDown } from "lucide-react";
 import type { Post } from "../types";
 import { formatTime, twitterWeightedLength } from "../utils/format";
 
@@ -12,8 +12,10 @@ interface TimelineProps {
 
 export function Timeline({ posts, suffix, onDelete, onEdit }: TimelineProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
   const editWeight = twitterWeightedLength(editText);
   const prevCountRef = useRef(posts.length);
 
@@ -24,6 +26,22 @@ export function Timeline({ posts, suffix, onDelete, onEdit }: TimelineProps) {
     }
     prevCountRef.current = posts.length;
   }, [posts.length]);
+
+  // Show/hide scroll-to-bottom button based on scroll position
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const handleScroll = () => {
+      const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+      setShowScrollBtn(distanceFromBottom > 200);
+    };
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
   const startEdit = (post: Post) => {
     setEditingId(post.id);
@@ -61,7 +79,7 @@ export function Timeline({ posts, suffix, onDelete, onEdit }: TimelineProps) {
   const sfx = suffix.trim();
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+    <div ref={containerRef} className="relative flex-1 overflow-y-auto px-4 py-3 space-y-2">
       {posts.map((post) => (
         <div
           key={post.id}
@@ -147,6 +165,16 @@ export function Timeline({ posts, suffix, onDelete, onEdit }: TimelineProps) {
         </div>
       ))}
       <div ref={bottomRef} />
+      {showScrollBtn && (
+        <button
+          onClick={scrollToBottom}
+          className="sticky bottom-3 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors"
+          title="最新の投稿へスクロール"
+        >
+          <ArrowDown size={14} />
+          最新へ
+        </button>
+      )}
     </div>
   );
 }

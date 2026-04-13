@@ -27,8 +27,9 @@ export function Header({ posts }: HeaderProps) {
   const doImport = async (file: File, mode: ImportMode) => {
     try {
       await posts.importJSON(file, mode);
-    } catch {
-      alert("ファイルの読み込みに失敗しました");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "不明なエラー";
+      alert(`ファイルの読み込みに失敗しました: ${msg}`);
     }
   };
 
@@ -132,11 +133,23 @@ export function Header({ posts }: HeaderProps) {
                 if (confirm("すべての投稿を削除しますか？")) posts.clearAll();
               }}
               className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
-              title="全削除"
+              title="投稿を全削除"
             >
               <Trash2 size={16} />
             </button>
           )}
+          <button
+            onClick={() => {
+              if (confirm("投稿・下書き・投稿者名・サフィックスなど、すべてのデータを削除しますか？\n（この操作は元に戻せません）")) {
+                posts.clearAllData();
+              }
+            }}
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+            title="すべてのデータを削除"
+          >
+            <Trash2 size={16} />
+            <span className="hidden sm:inline">完全削除</span>
+          </button>
           <input
             ref={fileRef}
             type="file"
