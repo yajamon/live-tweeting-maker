@@ -27,8 +27,8 @@ export function Composer({ onSubmit, disabled }: ComposerProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // IME変換中のEnterは無視する
     if (e.nativeEvent.isComposing) return;
-    // Enter で送信、Shift+Enter で改行
-    if (e.key === "Enter" && !e.shiftKey) {
+    // Ctrl+Enter (macOS: Cmd+Enter) で送信
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       submit();
     }
