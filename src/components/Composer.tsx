@@ -25,7 +25,9 @@ export function Composer({ onSubmit, disabled }: ComposerProps) {
   }, [text, disabled, onSubmit]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Enter without Shift to submit; Shift+Enter for newline
+    // IME変換中のEnterは無視する
+    if (e.nativeEvent.isComposing) return;
+    // Enter で送信、Shift+Enter で改行
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       submit();
