@@ -1,9 +1,19 @@
-/** Format seconds as HH:MM:SS */
+/** Format seconds as HH:MM:SS.xx */
 export function formatTime(totalSeconds: number): string {
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
+  const safeSeconds = Math.max(0, Math.round(totalSeconds * 100) / 100);
+  const wholeSeconds = Math.floor(safeSeconds);
+  const hours = Math.floor(wholeSeconds / 3600);
+  const minutes = Math.floor((wholeSeconds % 3600) / 60);
+  const seconds = wholeSeconds % 60;
+  const centiseconds = Math.round((safeSeconds - wholeSeconds) * 100);
+
+  if (centiseconds === 100) {
+    return formatTime(wholeSeconds + 1);
+  }
+
+  return `${[hours, minutes, seconds]
+    .map((value) => String(value).padStart(2, "0"))
+    .join(":")}.${String(centiseconds).padStart(2, "0")}`;
 }
 
 /**

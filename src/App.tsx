@@ -9,8 +9,6 @@ function App() {
   const timer = useTimer();
   const posts = usePosts();
 
-  const canPost = timer.phase === "running" || timer.phase === "stopped";
-
   const handleSubmit = (text: string) => {
     posts.addPost(timer.elapsedSeconds, text);
   };
@@ -24,7 +22,7 @@ function App() {
         onDelete={posts.deletePost}
         onEdit={posts.editPost}
       />
-      <Composer onSubmit={handleSubmit} disabled={!canPost} />
+      <Composer onSubmit={handleSubmit} />
     </div>
   );
 }

@@ -3,23 +3,71 @@ import type { Post, SessionData } from "../types";
 
 const STORAGE_KEY = "live-tweeting-maker:posts";
 
-function loadPosts(): Post[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: Post[] = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+function normalizePost(post: unknown): Post | null {
+  if (!post || typeof post !== "object") {
+    return null;
   }
+
+  const candidate = post as Partial<Post>;
+  if (
+    typeof candidate.id !== "string" ||
+    typeof candidate.timestamp !== "number" ||
+    typeof candidate.text !== "string" ||
+    typeof candidate.createdAt !== "string"
+  ) {
+    return null;
+  }
+
+  return candidate as Post;
 }
 
-function savePosts(posts: Post[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
+function loadSession(): SessionData {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) {
+    return {
+      authorName: "",
+      posts: [],
+      version: 2,
+    };
+  }
+
+  const parsed: unknown = JSON.parse(raw);
+
+  if (Array.isArray(parsed)) {
+    return {
+      authorName: "",
+      posts: parsed.map(normalizePost).filter((post): post is Post => post !== null),
+      version: 2,
+    };
+  }
+
+  if (parsed && typeof parsed === "object") {
+    const session = parsed as Partial<SessionData>;
+
+    return {
+      authorName: typeof session.authorName === "string" ? session.authorName : "",
+      posts: Array.isArray(session.posts)
+        ? session.posts.map(normalizePost).filter((post): post is Post => post !== null)
+        : [],
+      version: 2,
+    };
+  }
+
+  return {
+    authorName: "",
+    posts: [],
+    version: 2,
+  };
+}
+
+function saveSession(session: SessionData) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
 }
 
 export interface UsePostsReturn {
+  authorName: string;
   posts: Post[];
+  setAuthorName: (authorName: string) => void;
   addPost: (timestamp: number, text: string) => void;
   deletePost: (id: string) => void;
   editPost: (id: string, text: string) => void;
@@ -29,11 +77,19 @@ export interface UsePostsReturn {
 }
 
 export function usePosts(): UsePostsReturn {
-  const [posts, setPosts] = useState<Post[]>(loadPosts);
+  const [session, setSession] = useState<SessionData>(loadSession);
+  const { authorName, posts } = session;
 
   useEffect(() => {
-    savePosts(posts);
-  }, [posts]);
+    saveSession(session);
+  }, [session]);
+
+  const setAuthorName = useCallback((nextAuthorName: string) => {
+    setSession((prev) => ({
+      ...prev,
+      authorName: nextAuthorName,
+    }));
+  }, []);
 
   const addPost = useCallback((timestamp: number, text: string) => {
     const post: Post = {
@@ -42,25 +98,39 @@ export function usePosts(): UsePostsReturn {
       text,
       createdAt: new Date().toISOString(),
     };
-    setPosts((prev) => [...prev, post]);
+    setSession((prev) => ({
+      ...prev,
+      posts: [...prev.posts, post],
+    }));
   }, []);
 
   const deletePost = useCallback((id: string) => {
-    setPosts((prev) => prev.filter((p) => p.id !== id));
+    setSession((prev) => ({
+      ...prev,
+      posts: prev.posts.filter((post) => post.id !== id),
+    }));
   }, []);
 
   const editPost = useCallback((id: string, text: string) => {
-    setPosts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, text } : p)),
-    );
+    setSession((prev) => ({
+      ...prev,
+      posts: prev.posts.map((post) => (post.id === id ? { ...post, text } : post)),
+    }));
   }, []);
 
   const clearAll = useCallback(() => {
-    setPosts([]);
+    setSession((prev) => ({
+      ...prev,
+      posts: [],
+    }));
   }, []);
 
   const exportJSON = useCallback(() => {
-    const data: SessionData = { posts, version: 1 };
+    const data: SessionData = {
+      authorName,
+      posts,
+      version: 2,
+    };
     const blob = new Blob([JSON.stringify(data, null, 2)], {
       type: "application/json",
     });
@@ -70,16 +140,46 @@ export function usePosts(): UsePostsReturn {
     a.download = `live-tweeting-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [posts]);
+  }, [authorName, posts]);
 
   const importJSON = useCallback(async (file: File) => {
     const text = await file.text();
-    const data = JSON.parse(text) as SessionData;
-    if (!data.posts || !Array.isArray(data.posts)) {
+    const raw = JSON.parse(text) as unknown;
+
+    if (Array.isArray(raw)) {
+      setSession({
+        authorName: "",
+        posts: raw.map(normalizePost).filter((post): post is Post => post !== null),
+        version: 2,
+      });
+      return;
+    }
+
+    if (!raw || typeof raw !== "object") {
       throw new Error("Invalid file format");
     }
-    setPosts(data.posts);
+
+    const data = raw as Partial<SessionData>;
+    if (!Array.isArray(data.posts)) {
+      throw new Error("Invalid file format");
+    }
+
+    setSession({
+      authorName: typeof data.authorName === "string" ? data.authorName : "",
+      posts: data.posts.map(normalizePost).filter((post): post is Post => post !== null),
+      version: 2,
+    });
   }, []);
 
-  return { posts, addPost, deletePost, editPost, clearAll, exportJSON, importJSON };
+  return {
+    authorName,
+    posts,
+    setAuthorName,
+    addPost,
+    deletePost,
+    editPost,
+    clearAll,
+    exportJSON,
+    importJSON,
+  };
 }

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Play, Square, RotateCcw, Minus, Plus } from "lucide-react";
 import type { UseTimerReturn } from "../hooks/useTimer";
 import { formatTime } from "../utils/format";
@@ -7,6 +8,7 @@ interface TimerPanelProps {
 }
 
 export function TimerPanel({ timer }: TimerPanelProps) {
+  const [startSecondsInput, setStartSecondsInput] = useState(timer.initialSeconds.toFixed(2));
   const offsets = [
     { label: "-10s", delta: -10 },
     { label: "-1s", delta: -1 },
@@ -14,9 +16,20 @@ export function TimerPanel({ timer }: TimerPanelProps) {
     { label: "+10s", delta: +10 },
   ];
 
+  const applyInitialSeconds = () => {
+    const parsed = Number(startSecondsInput);
+    if (!Number.isFinite(parsed)) {
+      setStartSecondsInput(timer.initialSeconds.toFixed(2));
+      return;
+    }
+
+    const nextValue = Math.max(0, parsed);
+    timer.setInitialSeconds(nextValue);
+    setStartSecondsInput(nextValue.toFixed(2));
+  };
+
   return (
     <div className="flex flex-col items-center gap-3 px-4 py-4 border-b border-gray-200 dark:border-gray-700">
-      {/* Timer display */}
       <div className="text-5xl sm:text-6xl font-mono font-bold tabular-nums text-gray-900 dark:text-gray-100 select-none">
         {timer.phase === "countdown" ? (
           <span className="text-yellow-500 animate-pulse">
@@ -27,7 +40,31 @@ export function TimerPanel({ timer }: TimerPanelProps) {
         )}
       </div>
 
-      {/* Main controls */}
+      <div className="flex flex-col items-center gap-2 sm:flex-row">
+        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+          <span>開始秒数</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            value={startSecondsInput}
+            onChange={(event) => setStartSecondsInput(event.target.value)}
+            onBlur={applyInitialSeconds}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                applyInitialSeconds();
+              }
+            }}
+            disabled={timer.phase !== "idle"}
+            className="w-32 rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 font-mono text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          />
+        </label>
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          スタート前のみ変更可
+        </span>
+      </div>
+
       <div className="flex gap-2">
         {(timer.phase === "idle" || timer.phase === "stopped") && (
           <button
@@ -66,7 +103,6 @@ export function TimerPanel({ timer }: TimerPanelProps) {
         )}
       </div>
 
-      {/* Offset adjustments */}
       {(timer.phase === "running" || timer.phase === "stopped") && (
         <div className="flex gap-1.5">
           {offsets.map(({ label, delta }) => (

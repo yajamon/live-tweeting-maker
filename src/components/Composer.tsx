@@ -6,10 +6,9 @@ const MAX_WEIGHT = 280;
 
 interface ComposerProps {
   onSubmit: (text: string) => void;
-  disabled?: boolean;
 }
 
-export function Composer({ onSubmit, disabled }: ComposerProps) {
+export function Composer({ onSubmit }: ComposerProps) {
   const [text, setText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -18,11 +17,11 @@ export function Composer({ onSubmit, disabled }: ComposerProps) {
 
   const submit = useCallback(() => {
     const trimmed = text.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed) return;
     onSubmit(trimmed);
     setText("");
     textareaRef.current?.focus();
-  }, [text, disabled, onSubmit]);
+  }, [text, onSubmit]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // IME変換中のEnterは無視する
@@ -42,14 +41,13 @@ export function Composer({ onSubmit, disabled }: ComposerProps) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={disabled ? "タイマーをスタートしてください" : "実況コメントを入力…"}
-          disabled={disabled}
-          rows={2}
-          className="flex-1 resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm placeholder:text-gray-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+          placeholder="実況コメントを入力…（Ctrl+Enter / Cmd+Enter で送信）"
+          rows={3}
+          className="flex-1 resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-3 text-base leading-7 placeholder:text-gray-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
         />
         <button
           onClick={submit}
-          disabled={disabled || !text.trim() || overLimit}
+          disabled={!text.trim()}
           className="shrink-0 p-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           title="送信"
         >

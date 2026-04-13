@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Pencil, Trash2, Check, X } from "lucide-react";
 import type { Post } from "../types";
-import { formatTime } from "../utils/format";
+import { formatTime, twitterWeightedLength } from "../utils/format";
 
 interface TimelineProps {
   posts: Post[];
@@ -13,6 +13,7 @@ export function Timeline({ posts, onDelete, onEdit }: TimelineProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const editWeight = twitterWeightedLength(editText);
 
   // Auto-scroll to bottom when new posts arrive
   useEffect(() => {
@@ -40,7 +41,7 @@ export function Timeline({ posts, onDelete, onEdit }: TimelineProps) {
   if (posts.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500 select-none">
-        タイマーをスタートして実況を始めましょう
+        投稿はいつでも始められます
       </div>
     );
   }
@@ -57,30 +58,51 @@ export function Timeline({ posts, onDelete, onEdit }: TimelineProps) {
           </span>
 
           {editingId === post.id ? (
-            <div className="flex-1 flex gap-2">
-              <input
-                type="text"
+            <div className="flex-1 space-y-2">
+              <textarea
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") confirmEdit();
+                  if (e.nativeEvent.isComposing) return;
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    confirmEdit();
+                  }
                   if (e.key === "Escape") cancelEdit();
                 }}
-                className="flex-1 px-2 py-1 text-sm rounded border border-blue-400 dark:border-blue-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-none"
+                rows={3}
+                className="w-full resize-none rounded-lg border border-blue-400 bg-white px-3 py-2 text-base leading-6 text-gray-900 outline-none focus:ring-1 focus:ring-blue-500 dark:border-blue-600 dark:bg-gray-900 dark:text-gray-100"
                 autoFocus
               />
-              <button
-                onClick={confirmEdit}
-                className="p-1 text-green-600 hover:text-green-700"
-              >
-                <Check size={16} />
-              </button>
-              <button
-                onClick={cancelEdit}
-                className="p-1 text-gray-400 hover:text-gray-600"
-              >
-                <X size={16} />
-              </button>
+              <div className="flex items-center justify-between gap-3">
+                <span
+                  className={`text-xs tabular-nums ${
+                    editWeight > 280
+                      ? "text-red-500 font-bold"
+                      : editWeight > 252
+                        ? "text-yellow-500"
+                        : "text-gray-400"
+                  }`}
+                >
+                  {editWeight} / 280
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={confirmEdit}
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-green-600 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-950/40"
+                  >
+                    <Check size={16} />
+                    保存
+                  </button>
+                  <button
+                    onClick={cancelEdit}
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800"
+                  >
+                    <X size={16} />
+                    キャンセル
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             <>
@@ -96,7 +118,11 @@ export function Timeline({ posts, onDelete, onEdit }: TimelineProps) {
                   <Pencil size={14} />
                 </button>
                 <button
-                  onClick={() => onDelete(post.id)}
+                  onClick={() => {
+                    if (confirm("この投稿を削除しますか？")) {
+                      onDelete(post.id);
+                    }
+                  }}
                   className="p-1 text-gray-400 hover:text-red-500"
                   title="削除"
                 >

@@ -5,17 +5,20 @@ export type TimerPhase = "idle" | "countdown" | "running" | "stopped";
 export interface UseTimerReturn {
   /** Current elapsed seconds (adjusted by offset) */
   elapsedSeconds: number;
+  initialSeconds: number;
   phase: TimerPhase;
   countdownRemaining: number;
   startWithCountdown: (countdownFrom?: number) => void;
   stop: () => void;
   reset: () => void;
   adjustOffset: (delta: number) => void;
+  setInitialSeconds: (seconds: number) => void;
 }
 
 export function useTimer(): UseTimerReturn {
   const [phase, setPhase] = useState<TimerPhase>("idle");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [initialSeconds, setInitialSecondsState] = useState(0);
   const [countdownRemaining, setCountdownRemaining] = useState(0);
   const [offset, setOffset] = useState(0);
 
@@ -39,9 +42,9 @@ export function useTimer(): UseTimerReturn {
     startTimeRef.current = Date.now();
     setPhase("running");
     intervalRef.current = setInterval(() => {
-      const raw = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      const raw = (Date.now() - startTimeRef.current) / 1000;
       setElapsedSeconds(raw);
-    }, 200); // update frequently for accuracy
+    }, 50);
   }, []);
 
   const startWithCountdown = useCallback(
@@ -77,9 +80,12 @@ export function useTimer(): UseTimerReturn {
   );
 
   const stop = useCallback(() => {
+    if (phase === "running") {
+      setElapsedSeconds((Date.now() - startTimeRef.current) / 1000);
+    }
     clearIntervals();
     setPhase("stopped");
-  }, [clearIntervals]);
+  }, [clearIntervals, phase]);
 
   const reset = useCallback(() => {
     clearIntervals();
@@ -93,18 +99,24 @@ export function useTimer(): UseTimerReturn {
     setOffset((prev) => prev + delta);
   }, []);
 
+  const setInitialSeconds = useCallback((seconds: number) => {
+    setInitialSecondsState(Math.max(0, seconds));
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => clearIntervals, [clearIntervals]);
 
-  const adjusted = Math.max(0, elapsedSeconds + offset);
+  const adjusted = Math.max(0, initialSeconds + elapsedSeconds + offset);
 
   return {
     elapsedSeconds: adjusted,
+    initialSeconds,
     phase,
     countdownRemaining,
     startWithCountdown,
     stop,
     reset,
     adjustOffset,
+    setInitialSeconds,
   };
 }

@@ -21,11 +21,23 @@ export function Header({ posts }: HeaderProps) {
   };
 
   return (
-    <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-      <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-        実況ツイートメーカー
-      </h1>
-      <div className="flex gap-2">
+    <header className="flex flex-col gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-2">
+        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+          実況ツイートメーカー
+        </h1>
+        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+          <span className="shrink-0">投稿者名</span>
+          <input
+            type="text"
+            value={posts.authorName}
+            onChange={(event) => posts.setAuthorName(event.target.value)}
+            placeholder="名前を入力"
+            className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 sm:w-56"
+          />
+        </label>
+      </div>
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={posts.exportJSON}
           className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
