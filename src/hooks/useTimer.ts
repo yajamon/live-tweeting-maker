@@ -10,6 +10,7 @@ export interface UseTimerReturn {
   phase: TimerPhase;
   countdownRemaining: number;
   start: () => void;
+  resume: () => void;
   stop: () => void;
   reset: () => void;
   adjustOffset: (delta: number) => void;
@@ -90,6 +91,16 @@ export function useTimer(): UseTimerReturn {
     setPhase("stopped");
   }, [clearIntervals, phase]);
 
+  const resumeMainTimer = useCallback((accumulatedSeconds: number) => {
+    const baseTime = Date.now() - accumulatedSeconds * 1000;
+    startTimeRef.current = baseTime;
+    setPhase("running");
+    intervalRef.current = setInterval(() => {
+      const raw = (Date.now() - baseTime) / 1000;
+      setElapsedSeconds(raw);
+    }, 50);
+  }, []);
+
   const reset = useCallback(() => {
     clearIntervals();
     setElapsedSeconds(0);
@@ -105,6 +116,34 @@ export function useTimer(): UseTimerReturn {
   const start = useCallback(() => {
     startWithCountdown(countdownDuration);
   }, [startWithCountdown, countdownDuration]);
+
+  const resume = useCallback(() => {
+    if (phase !== "stopped") return;
+    const accumulated = elapsedSeconds;
+
+    if (countdownDuration <= 0) {
+      resumeMainTimer(accumulated);
+      return;
+    }
+
+    let remaining = countdownDuration;
+    setCountdownRemaining(remaining);
+    setPhase("countdown");
+
+    countdownIntervalRef.current = setInterval(() => {
+      remaining -= 0.05;
+      if (remaining <= 0) {
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+        }
+        setCountdownRemaining(0);
+        resumeMainTimer(accumulated);
+      } else {
+        setCountdownRemaining(remaining);
+      }
+    }, 50);
+  }, [phase, elapsedSeconds, countdownDuration, resumeMainTimer]);
 
   const setCountdownDuration = useCallback((seconds: number) => {
     setCountdownDurationState(Math.max(0, Math.round(seconds)));
@@ -126,6 +165,7 @@ export function useTimer(): UseTimerReturn {
     phase,
     countdownRemaining,
     start,
+    resume,
     stop,
     reset,
     adjustOffset,

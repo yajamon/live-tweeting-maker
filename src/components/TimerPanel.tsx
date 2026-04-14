@@ -106,13 +106,22 @@ export function TimerPanel({ timer }: TimerPanelProps) {
       </div>
 
       <div className="flex gap-2">
-        {(timer.phase === "idle" || timer.phase === "stopped") && (
+        {timer.phase === "idle" && (
           <button
             onClick={timer.start}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors font-medium"
           >
             <Play size={18} />
             スタート
+          </button>
+        )}
+        {timer.phase === "stopped" && (
+          <button
+            onClick={timer.resume}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors font-medium"
+          >
+            <Play size={18} />
+            再開
           </button>
         )}
         {timer.phase === "running" && (
