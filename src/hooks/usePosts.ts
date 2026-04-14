@@ -12,22 +12,45 @@ const IMPORT_MAX_META_LENGTH = 500;
 
 export type ImportMode = "replace" | "append" | "cancel";
 
+const IMPORT_MAX_ID_LENGTH = 200;
+
 function normalizePost(post: unknown): Post | null {
   if (!post || typeof post !== "object") {
     return null;
   }
 
-  const candidate = post as Partial<Post>;
-  if (
-    typeof candidate.id !== "string" ||
-    typeof candidate.timestamp !== "number" ||
-    typeof candidate.text !== "string" ||
-    typeof candidate.createdAt !== "string"
-  ) {
+  const candidate = post as Record<string, unknown>;
+
+  // text is required and must be a string
+  if (typeof candidate.text !== "string") {
     return null;
   }
 
-  return candidate as Post;
+  // timestamp: must be a finite non-negative number; reject NaN / Infinity
+  let timestamp: number;
+  if (typeof candidate.timestamp === "number" && Number.isFinite(candidate.timestamp) && candidate.timestamp >= 0) {
+    timestamp = candidate.timestamp;
+  } else {
+    return null;
+  }
+
+  // id: regenerate if missing, wrong type, empty, or excessively long
+  let id: string;
+  if (typeof candidate.id === "string" && candidate.id.length > 0 && candidate.id.length <= IMPORT_MAX_ID_LENGTH) {
+    id = candidate.id;
+  } else {
+    id = crypto.randomUUID();
+  }
+
+  // createdAt: validate as parseable date string; regenerate if invalid
+  let createdAt: string;
+  if (typeof candidate.createdAt === "string" && !Number.isNaN(Date.parse(candidate.createdAt))) {
+    createdAt = new Date(candidate.createdAt).toISOString();
+  } else {
+    createdAt = new Date().toISOString();
+  }
+
+  return { id, timestamp, text: candidate.text, createdAt };
 }
 
 function loadSession(): SessionData {
