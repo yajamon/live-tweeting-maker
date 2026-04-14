@@ -46,13 +46,25 @@ export function TimerPanel({ timer }: TimerPanelProps) {
 
   return (
     <div className="flex flex-col items-center gap-3 px-4 py-4 border-b border-gray-200 dark:border-gray-700">
-      <div className="text-5xl sm:text-6xl font-mono font-bold tabular-nums text-gray-900 dark:text-gray-100 select-none">
-        {timer.phase === "countdown" ? (
-          <span className="text-yellow-500 animate-pulse">
-            {timer.countdownRemaining}
-          </span>
-        ) : (
-          formatTime(timer.elapsedSeconds)
+      <div className="w-full">
+        <div className="text-5xl sm:text-6xl font-mono font-bold tabular-nums text-gray-900 dark:text-gray-100 select-none text-center">
+          {timer.phase === "countdown" ? (
+            <span className="text-yellow-500 animate-pulse">
+              {Math.ceil(timer.countdownRemaining)}
+            </span>
+          ) : (
+            formatTime(timer.elapsedSeconds)
+          )}
+        </div>
+        {timer.phase === "countdown" && (
+          <div className="mt-3 h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-all duration-50"
+              style={{
+                width: `${Math.max(0, (timer.countdownRemaining / timer.countdownDuration) * 100)}%`,
+              }}
+            />
+          </div>
         )}
       </div>
 

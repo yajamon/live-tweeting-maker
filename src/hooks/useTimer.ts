@@ -66,7 +66,7 @@ export function useTimer(): UseTimerReturn {
       setPhase("countdown");
 
       countdownIntervalRef.current = setInterval(() => {
-        remaining -= 1;
+        remaining -= 0.05;
         if (remaining <= 0) {
           if (countdownIntervalRef.current) {
             clearInterval(countdownIntervalRef.current);
@@ -77,7 +77,7 @@ export function useTimer(): UseTimerReturn {
         } else {
           setCountdownRemaining(remaining);
         }
-      }, 1000);
+      }, 50);
     },
     [clearIntervals, startMainTimer],
   );
