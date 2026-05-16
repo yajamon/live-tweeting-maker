@@ -97,6 +97,7 @@ export function useTimer(): UseTimerReturn {
 
   const reset = useCallback(() => {
     clearIntervals();
+    setInitialSecondsState(0);
     setRunningSeconds(0);
     setOffset(0);
     setCountdownRemaining(0);
