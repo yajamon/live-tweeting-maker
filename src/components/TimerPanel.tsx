@@ -171,7 +171,7 @@ export function TimerPanel({ timer }: TimerPanelProps) {
         )}
       </div>
 
-      {(timer.phase === "running" || timer.phase === "stopped") && (
+      {timer.phase === "running" && (
         <div className="flex gap-1.5">
           {offsets.map(({ label, delta }) => (
             <button
