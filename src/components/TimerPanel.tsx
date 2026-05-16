@@ -10,6 +10,8 @@ interface TimerPanelProps {
 export function TimerPanel({ timer }: TimerPanelProps) {
   const [startTimeInput, setStartTimeInput] = useState(formatTime(timer.initialSeconds));
   const [countdownInput, setCountdownInput] = useState(String(timer.countdownDuration));
+  const [editingStartTime, setEditingStartTime] = useState(false);
+  const [editingCountdown, setEditingCountdown] = useState(false);
   const offsets = [
     { label: "-10s", delta: -10 },
     { label: "-1s", delta: -1 },
@@ -17,29 +19,38 @@ export function TimerPanel({ timer }: TimerPanelProps) {
     { label: "+10s", delta: +10 },
   ];
 
+  const startTimeValue = editingStartTime ? startTimeInput : formatTime(timer.initialSeconds);
+  const countdownValue = editingCountdown ? countdownInput : String(timer.countdownDuration);
+
   const applyInitialSeconds = () => {
-    const parsed = parseTimeInput(startTimeInput);
+    const parsed = parseTimeInput(startTimeValue);
     if (!Number.isFinite(parsed) || parsed < 0) {
       setStartTimeInput(formatTime(timer.initialSeconds));
+      setEditingStartTime(false);
       return;
     }
     timer.setInitialSeconds(parsed);
     setStartTimeInput(formatTime(parsed));
+    setEditingStartTime(false);
   };
 
   const applyCountdown = () => {
-    const parsed = Number(countdownInput);
+    const parsed = Number(countdownValue);
     if (!Number.isFinite(parsed) || parsed < 0) {
       setCountdownInput(String(timer.countdownDuration));
+      setEditingCountdown(false);
       return;
     }
     const next = Math.max(0, Math.round(parsed));
     timer.setCountdownDuration(next);
     setCountdownInput(String(next));
+    setEditingCountdown(false);
   };
 
   const handleReset = () => {
     if (confirm("タイマーをリセットしますか？（投稿は残ります）")) {
+      setEditingStartTime(false);
+      setEditingCountdown(false);
       timer.reset();
     }
   };
@@ -74,13 +85,17 @@ export function TimerPanel({ timer }: TimerPanelProps) {
           <input
             type="text"
             inputMode="decimal"
-            value={startTimeInput}
+            value={startTimeValue}
+            onFocus={() => {
+              setEditingStartTime(true);
+              setStartTimeInput(formatTime(timer.initialSeconds));
+            }}
             onChange={(event) => setStartTimeInput(event.target.value)}
             onBlur={applyInitialSeconds}
             onKeyDown={(event) => {
               if (event.key === "Enter") applyInitialSeconds();
             }}
-            disabled={timer.phase !== "idle"}
+            disabled={timer.phase === "running" || timer.phase === "countdown"}
             placeholder="0:00 / 1:23:45"
             className="w-36 rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 font-mono text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
           />
@@ -92,13 +107,17 @@ export function TimerPanel({ timer }: TimerPanelProps) {
             min="0"
             step="1"
             inputMode="numeric"
-            value={countdownInput}
+            value={countdownValue}
+            onFocus={() => {
+              setEditingCountdown(true);
+              setCountdownInput(String(timer.countdownDuration));
+            }}
             onChange={(event) => setCountdownInput(event.target.value)}
             onBlur={applyCountdown}
             onKeyDown={(event) => {
               if (event.key === "Enter") applyCountdown();
             }}
-            disabled={timer.phase !== "idle"}
+            disabled={timer.phase === "running" || timer.phase === "countdown"}
             className="w-16 rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 font-mono text-sm text-gray-900 text-center outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
           />
           <span className="text-xs text-gray-500 dark:text-gray-400">秒</span>
