@@ -5,6 +5,7 @@ export type TimerPhase = "idle" | "countdown" | "running" | "stopped";
 export interface UseTimerReturn {
   /** Current elapsed seconds (adjusted by offset) */
   elapsedSeconds: number;
+  /** Baseline seconds used for the next start/resume */
   initialSeconds: number;
   countdownDuration: number;
   phase: TimerPhase;
@@ -20,7 +21,8 @@ export interface UseTimerReturn {
 
 export function useTimer(): UseTimerReturn {
   const [phase, setPhase] = useState<TimerPhase>("idle");
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [runningSeconds, setRunningSeconds] = useState(0);
+  // Baseline for the next run; stop commits the current running time here.
   const [initialSeconds, setInitialSecondsState] = useState(0);
   const [countdownRemaining, setCountdownRemaining] = useState(0);
   const [countdownDuration, setCountdownDurationState] = useState(10);
@@ -45,17 +47,16 @@ export function useTimer(): UseTimerReturn {
   const startMainTimer = useCallback(() => {
     startTimeRef.current = Date.now();
     setPhase("running");
+    setRunningSeconds(0);
     intervalRef.current = setInterval(() => {
       const raw = (Date.now() - startTimeRef.current) / 1000;
-      setElapsedSeconds(raw);
+      setRunningSeconds(raw);
     }, 50);
   }, []);
 
   const startWithCountdown = useCallback(
     (countdownFrom: number) => {
       clearIntervals();
-      setOffset(0);
-      setElapsedSeconds(0);
 
       if (countdownFrom <= 0) {
         startMainTimer();
@@ -85,27 +86,22 @@ export function useTimer(): UseTimerReturn {
 
   const stop = useCallback(() => {
     if (phase === "running") {
-      setElapsedSeconds((Date.now() - startTimeRef.current) / 1000);
+      const running = (Date.now() - startTimeRef.current) / 1000;
+      setInitialSecondsState((prev) => Math.max(0, prev + running + offset));
+      setRunningSeconds(0);
+      setOffset(0);
     }
     clearIntervals();
     setPhase("stopped");
-  }, [clearIntervals, phase]);
-
-  const resumeMainTimer = useCallback((accumulatedSeconds: number) => {
-    const baseTime = Date.now() - accumulatedSeconds * 1000;
-    startTimeRef.current = baseTime;
-    setPhase("running");
-    intervalRef.current = setInterval(() => {
-      const raw = (Date.now() - baseTime) / 1000;
-      setElapsedSeconds(raw);
-    }, 50);
-  }, []);
+  }, [clearIntervals, phase, offset]);
 
   const reset = useCallback(() => {
     clearIntervals();
-    setElapsedSeconds(0);
+    setInitialSecondsState(0);
+    setRunningSeconds(0);
     setOffset(0);
     setCountdownRemaining(0);
+    startTimeRef.current = 0;
     setPhase("idle");
   }, [clearIntervals]);
 
@@ -119,31 +115,8 @@ export function useTimer(): UseTimerReturn {
 
   const resume = useCallback(() => {
     if (phase !== "stopped") return;
-    const accumulated = elapsedSeconds;
-
-    if (countdownDuration <= 0) {
-      resumeMainTimer(accumulated);
-      return;
-    }
-
-    let remaining = countdownDuration;
-    setCountdownRemaining(remaining);
-    setPhase("countdown");
-
-    countdownIntervalRef.current = setInterval(() => {
-      remaining -= 0.05;
-      if (remaining <= 0) {
-        if (countdownIntervalRef.current) {
-          clearInterval(countdownIntervalRef.current);
-          countdownIntervalRef.current = null;
-        }
-        setCountdownRemaining(0);
-        resumeMainTimer(accumulated);
-      } else {
-        setCountdownRemaining(remaining);
-      }
-    }, 50);
-  }, [phase, elapsedSeconds, countdownDuration, resumeMainTimer]);
+    startWithCountdown(countdownDuration);
+  }, [phase, countdownDuration, startWithCountdown]);
 
   const setCountdownDuration = useCallback((seconds: number) => {
     setCountdownDurationState(Math.max(0, Math.round(seconds)));
@@ -156,7 +129,7 @@ export function useTimer(): UseTimerReturn {
   // Cleanup on unmount
   useEffect(() => clearIntervals, [clearIntervals]);
 
-  const adjusted = Math.max(0, initialSeconds + elapsedSeconds + offset);
+  const adjusted = Math.max(0, initialSeconds + runningSeconds + offset);
 
   return {
     elapsedSeconds: adjusted,
